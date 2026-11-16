@@ -1,28 +1,37 @@
 'use client';
+import { Column, Row } from '@umami/react-zen';
+import { useState } from 'react';
 import { FieldSelectForm } from '@/app/(main)/websites/[websiteId]/(reports)/breakdown/FieldSelectForm';
 import { WebsiteControls } from '@/app/(main)/websites/[websiteId]/WebsiteControls';
 import { Panel } from '@/components/common/Panel';
-import { useDateRange, useMessages, useMobile } from '@/components/hooks';
+import { useBreakdownQuery, useDateRange, useMessages, useTimezone } from '@/components/hooks';
 import { ListCheck } from '@/components/icons';
 import { DialogButton } from '@/components/input/DialogButton';
-import { Column, Row } from '@umami/react-zen';
-import { useState } from 'react';
+import { DownloadButton } from '@/components/input/DownloadButton';
 import { Breakdown } from './Breakdown';
 
 export function BreakdownPage({ websiteId }: { websiteId: string }) {
+  const { timezone } = useTimezone();
   const {
     dateRange: { startDate, endDate },
-  } = useDateRange();
+  } = useDateRange({ timezone });
   const [fields, setFields] = useState(['path']);
-  const { isMobile } = useMobile();
-
+  const { data } = useBreakdownQuery(
+    { websiteId, startDate, endDate, fields },
+    { enabled: !!fields.length },
+  );
   return (
     <Column gap>
       <WebsiteControls websiteId={websiteId} />
-      <Row alignItems="center" justifyContent={isMobile ? 'flex-end' : 'flex-start'}>
+      <Row alignItems="center" justifyContent="flex-start">
         <FieldsButton value={fields} onChange={setFields} />
       </Row>
-      <Panel height="900px" overflow="auto" allowFullscreen>
+      <Panel
+        height="900px"
+        overflow="auto"
+        allowFullscreen
+        toolbar={<DownloadButton filename="breakdown" data={data} />}
+      >
         <Breakdown
           websiteId={websiteId}
           startDate={startDate}
@@ -35,14 +44,15 @@ export function BreakdownPage({ websiteId }: { websiteId: string }) {
 }
 
 const FieldsButton = ({ value, onChange }) => {
-  const { formatMessage, labels } = useMessages();
+  const { t, labels } = useMessages();
 
   return (
     <DialogButton
       icon={<ListCheck />}
-      label={formatMessage(labels.fields)}
-      width="800px"
+      label={t(labels.fields)}
+      width="400px"
       minHeight="300px"
+      variant="outline"
     >
       {({ close }) => {
         return <FieldSelectForm selectedFields={value} onChange={onChange} onClose={close} />;

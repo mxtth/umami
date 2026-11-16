@@ -1,20 +1,22 @@
 import { useEffect } from 'react';
-import { httpGet } from '@/lib/fetch';
-import { setItem } from '@/lib/storage';
 import { LOCALE_CONFIG } from '@/lib/constants';
+import { httpGet } from '@/lib/fetch';
 import { getDateLocale, getTextDirection } from '@/lib/lang';
-import { useApp, setLocale } from '@/store/app';
+import { setItem } from '@/lib/storage';
+import { setLocale, useApp } from '@/store/app';
+import enUS from '../../../public/intl/messages/en-US.json';
 import { useForceUpdate } from './useForceUpdate';
-import enUS from '../../../public/intl/country/en-US.json';
 
 const messages = {
   'en-US': enUS,
 };
 
 const selector = (state: { locale: string }) => state.locale;
+const timeFormatSelector = (state: { timeFormat: string }) => state.timeFormat;
 
 export function useLocale() {
   const locale = useApp(selector);
+  const timeFormat = useApp(timeFormatSelector);
   const forceUpdate = useForceUpdate();
   const dir = getTextDirection(locale);
   const dateLocale = getDateLocale(locale);
@@ -22,7 +24,19 @@ export function useLocale() {
   async function loadMessages(locale: string) {
     const { data } = await httpGet(`${process.env.basePath || ''}/intl/messages/${locale}.json`);
 
-    messages[locale] = data;
+    messages[locale] = {
+      ...data,
+      label: {
+        monitoring: enUS.label.monitoring,
+        'language-default': enUS.label['language-default'],
+        '12-hour': enUS.label['12-hour'],
+        '24-hour': enUS.label['24-hour'],
+        'time-format': enUS.label['time-format'],
+        ...data.label,
+      },
+      errorTracking: { ...enUS.errorTracking, ...data.errorTracking },
+      googleAds: { ...enUS.googleAds, ...data.googleAds },
+    };
   }
 
   async function saveLocale(value: string) {
@@ -31,8 +45,6 @@ export function useLocale() {
     }
 
     setItem(LOCALE_CONFIG, value);
-
-    document.getElementById('__next')?.setAttribute('dir', getTextDirection(value));
 
     if (locale !== value) {
       setLocale(value);
@@ -48,6 +60,11 @@ export function useLocale() {
   }, [locale]);
 
   useEffect(() => {
+    document.documentElement.lang = locale.split('-')[0];
+    document.documentElement.setAttribute('dir', getTextDirection(locale));
+  }, [locale]);
+
+  useEffect(() => {
     const url = new URL(window?.location?.href);
     const locale = url.searchParams.get('locale');
 
@@ -56,5 +73,5 @@ export function useLocale() {
     }
   }, []);
 
-  return { locale, saveLocale, messages, dir, dateLocale };
+  return { locale, saveLocale, messages, dir, dateLocale, timeFormat };
 }

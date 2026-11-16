@@ -1,11 +1,12 @@
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
-import { notFound } from '@/lib/response';
-import { findLink } from '@/queries/prisma';
 import { POST } from '@/app/api/send/route';
-import { Link } from '@/generated/prisma/client';
+import type { Link } from '@/generated/prisma/client';
 import redis from '@/lib/redis';
+import { notFound } from '@/lib/response';
+import { isValidUrl } from '@/lib/url';
+import { findLink } from '@/queries/prisma';
 
 export async function GET(request: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -19,6 +20,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
         return findLink({
           where: {
             slug,
+            deletedAt: null,
           },
         });
       },
@@ -32,6 +34,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
     link = await findLink({
       where: {
         slug,
+        deletedAt: null,
       },
     });
 
@@ -40,12 +43,17 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
     }
   }
 
+  // Links saved before the API validated urls may be relative; don't record a click we can't redirect.
+  if (!isValidUrl(link.url)) {
+    return notFound();
+  }
+
   const payload = {
     type: 'event',
     payload: {
       link: link.id,
       url: request.url,
-      referrer: request.headers.get('referer'),
+      referrer: request.headers.get('referer') || undefined,
     },
   };
 

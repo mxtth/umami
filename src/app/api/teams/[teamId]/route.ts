@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { unauthorized, json, notFound, ok } from '@/lib/response';
-import { canDeleteTeam, canUpdateTeam, canViewTeam } from '@/permissions';
 import { parseRequest } from '@/lib/request';
+import { json, notFound, ok, unauthorized } from '@/lib/response';
+import { canDeleteTeam, canUpdateTeam, canViewTeam } from '@/permissions';
 import { deleteTeam, getTeam, updateTeam } from '@/queries/prisma';
 
 export async function GET(request: Request, { params }: { params: Promise<{ teamId: string }> }) {
@@ -21,6 +21,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ team
 
   if (!team) {
     return notFound({ message: 'Team not found.' });
+  }
+
+  // The access code lets anyone join the team as a member, so only roles that can edit the
+  // team receive it.
+  if (!(await canUpdateTeam(auth, teamId))) {
+    const { accessCode: _accessCode, ...rest } = team;
+
+    return json(rest);
   }
 
   return json(team);

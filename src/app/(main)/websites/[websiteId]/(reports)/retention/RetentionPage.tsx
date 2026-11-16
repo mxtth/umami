@@ -1,14 +1,15 @@
 'use client';
 import { Column } from '@umami/react-zen';
-import { Retention } from './Retention';
-import { WebsiteControls } from '@/app/(main)/websites/[websiteId]/WebsiteControls';
-import { useDateRange } from '@/components/hooks';
 import { endOfMonth, startOfMonth } from 'date-fns';
+import { WebsiteControls } from '@/app/(main)/websites/[websiteId]/WebsiteControls';
+import { useDateRange, useTimezone } from '@/components/hooks';
+import { Retention } from './Retention';
 
 export function RetentionPage({ websiteId }: { websiteId: string }) {
+  const { timezone } = useTimezone();
   const {
     dateRange: { startDate },
-  } = useDateRange();
+  } = useDateRange({ timezone });
 
   const monthStartDate = startOfMonth(startDate);
   const monthEndDate = endOfMonth(startDate);
