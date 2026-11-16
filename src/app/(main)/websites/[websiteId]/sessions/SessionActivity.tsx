@@ -1,66 +1,86 @@
-import { isSameDay } from 'date-fns';
 import {
-  Icon,
-  StatusLight,
-  Column,
-  Row,
-  Heading,
-  Text,
   Button,
-  DialogTrigger,
-  Popover,
+  Column,
   Dialog,
+  DialogTrigger,
+  Heading,
+  Icon,
+  Popover,
+  Row,
+  StatusLight,
+  Text,
 } from '@umami/react-zen';
+import { isSameDay } from 'date-fns';
 import { LoadingPanel } from '@/components/common/LoadingPanel';
+import { useMessages, useMobile, useSessionActivityQuery, useTimezone } from '@/components/hooks';
 import { Eye, FileText } from '@/components/icons';
-import { Lightning } from '@/components/svg';
-import { useMessages, useSessionActivityQuery, useTimezone } from '@/components/hooks';
 import { EventData } from '@/components/metrics/EventData';
+import { Lightning } from '@/components/svg';
 
 export function SessionActivity({
   websiteId,
   sessionId,
   startDate,
   endDate,
+  distinctId,
 }: {
   websiteId: string;
   sessionId: string;
   startDate: Date;
   endDate: Date;
+  distinctId?: string;
 }) {
-  const { formatMessage, labels } = useMessages();
+  const { t, labels } = useMessages();
   const { formatTimezoneDate } = useTimezone();
   const { data, isLoading, error } = useSessionActivityQuery(
     websiteId,
     sessionId,
     startDate,
     endDate,
+    distinctId,
   );
+  const { isMobile } = useMobile();
   let lastDay = null;
+
+  const renderLink = (label: string, hostname: string) => {
+    return (
+      <a
+        href={`//${hostname}${label}`}
+        style={{ fontWeight: 'bold' }}
+        target="_blank"
+        rel="noreferrer noopener"
+      >
+        {label}
+      </a>
+    );
+  };
 
   return (
     <LoadingPanel data={data} isLoading={isLoading} error={error}>
       <Column gap>
-        {data?.map(({ eventId, createdAt, urlPath, eventName, visitId, hasData }) => {
+        {data?.map(({ eventId, createdAt, urlPath, eventName, visitId, hostname, hasData }) => {
           const showHeader = !lastDay || !isSameDay(new Date(lastDay), new Date(createdAt));
           lastDay = createdAt;
 
           return (
             <Column key={eventId} gap>
-              {showHeader && <Heading size="1">{formatTimezoneDate(createdAt, 'PPPP')}</Heading>}
-              <Row alignItems="center" gap="6" height="40px">
+              {showHeader && <Heading size="lg">{formatTimezoneDate(createdAt, 'PPPP')}</Heading>}
+              <Row alignItems="center" gap="6" height="40px" style={{ minWidth: 0 }}>
                 <StatusLight color={`#${visitId?.substring(0, 6)}`}>
-                  {formatTimezoneDate(createdAt, 'pp')}
+                  <Text wrap="nowrap">{formatTimezoneDate(createdAt, 'pp')}</Text>
                 </StatusLight>
-                <Row alignItems="center" gap="2">
+                <Row alignItems="center" gap="2" style={{ minWidth: 0 }}>
                   <Icon>{eventName ? <Lightning /> : <Eye />}</Icon>
-                  <Text>
-                    {eventName
-                      ? formatMessage(labels.triggeredEvent)
-                      : formatMessage(labels.viewedPage)}
+                  <Text wrap="nowrap">
+                    {eventName ? t(labels.triggeredEvent) : t(labels.viewedPage)}
                   </Text>
-                  <Text weight="bold" style={{ maxWidth: '400px' }} truncate>
-                    {eventName || urlPath}
+                  <Text
+                    weight="bold"
+                    title={eventName || urlPath}
+                    style={{ minWidth: 0, maxWidth: isMobile ? '400px' : '600px' }}
+                    truncate
+                  >
+                    {eventName || renderLink(urlPath, hostname)}
                   </Text>
                   {hasData > 0 && <PropertiesButton websiteId={websiteId} eventId={eventId} />}
                 </Row>
@@ -83,7 +103,7 @@ const PropertiesButton = props => {
           </Icon>
         </Row>
       </Button>
-      <Popover placement="right">
+      <Popover side="right" sideOffset={8}>
         <Dialog>
           <EventData {...props} />
         </Dialog>

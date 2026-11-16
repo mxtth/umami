@@ -1,11 +1,16 @@
 import { Icon, Row, Text } from '@umami/react-zen';
-import { differenceInDays, isSameDay } from 'date-fns';
+import { differenceInDays, isSameDay, isValid } from 'date-fns';
 import { useLocale } from '@/components/hooks';
 import { Calendar } from '@/components/icons';
 import { formatDate } from '@/lib/date';
 
 export function DateDisplay({ startDate, endDate }) {
   const { locale } = useLocale();
+
+  if (!startDate || !endDate || !isValid(startDate) || !isValid(endDate)) {
+    return null;
+  }
+
   const isSingleDate = differenceInDays(endDate, startDate) === 0;
 
   return (
@@ -15,7 +20,7 @@ export function DateDisplay({ startDate, endDate }) {
       </Icon>
       <Text wrap="nowrap">
         {isSingleDate ? (
-          <>{formatDate(startDate, 'PP', locale)}</>
+          formatDate(startDate, 'PP', locale)
         ) : (
           <>
             {formatDate(startDate, 'PP', locale)}

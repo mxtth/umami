@@ -1,9 +1,9 @@
 'use client';
-import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import { useApi } from '@/components/hooks';
-import { setUser } from '@/store/app';
 import { removeClientAuthToken } from '@/lib/client';
+import { setUser } from '@/store/app';
 
 export function LogoutPage() {
   const router = useRouter();
@@ -11,13 +11,18 @@ export function LogoutPage() {
 
   useEffect(() => {
     async function logout() {
-      await post('/auth/logout');
-
-      router.push('/login');
+      try {
+        // Sent before the token is removed: the server ends the session it authenticates.
+        await post('/auth/logout');
+      } catch {
+        // The local logout below must still happen if the server call fails.
+      } finally {
+        removeClientAuthToken();
+        setUser(null);
+        window.location.href = `${process.env.basePath || ''}/login`;
+      }
     }
 
-    removeClientAuthToken();
-    setUser(null);
     logout();
   }, [router, post]);
 
